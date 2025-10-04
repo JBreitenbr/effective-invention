@@ -1,0 +1,246 @@
+<!--
+Füge das komplett in CodePen (HTML-Panel). 
+Tone.js wird per CDN geladen, dann Play drücken (erster Play ruft Tone.start()).
+-->
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Furba, Originale, Immortale — Tone.js Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/tone@next/build/Tone.js"></script>
+  <style>
+    :root{--bg:#0f0f13;--card:#121217;--accent:#d27b4a;--muted:#9aa0a6;color-scheme: dark;}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#0b0b0f 0%, #121218 100%); color:#e9eef2; margin:0; padding:28px; display:flex; gap:24px; align-items:flex-start; justify-content:center; min-height:100vh;}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:18px; width:760px; box-shadow:0 8px 30px rgba(0,0,0,0.6);}
+    h1{margin:0 0 8px 0; font-size:20px;}
+    p{margin:6px 0 14px 0; color:var(--muted);}
+    .controls{display:flex; gap:10px; align-items:center; margin-bottom:10px;}
+    button{background:var(--accent); color:#111; border:none; padding:10px 14px; border-radius:8px; font-weight:700; cursor:pointer;}
+    button.secondary{background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.05);}
+    label{font-size:13px; color:var(--muted);}
+    .row{display:flex; gap:10px; align-items:center;}
+    input[type="range"]{accent-color:var(--accent);}
+    pre{background:#08080a; padding:10px; border-radius:8px; color:#9dd3ff; overflow:auto;}
+    small{color:var(--muted);}
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>Furba, Originale, Immortale — Tone.js Demo</h1>
+    <p>Rockballade-Arrangement (Intro → Verse → Chorus → Bridge → Finale). Play drücken, erster Play startet Audio-Context.</p>
+
+    <div class="controls">
+      <button id="play">► Play</button>
+      <button id="stop" class="secondary">■ Stop</button>
+      <div style="margin-left:12px;">
+        <label>Tempo: <span id="bpmLabel">78</span> BPM</label><br/>
+        <input id="bpm" type="range" min="60" max="110" value="78">
+      </div>
+      <div style="margin-left:12px;">
+        <label>Master Vol</label><br/>
+        <input id="vol" type="range" min="-24" max="0" value="-6">
+      </div>
+    </div>
+
+    <small>Tip: Erst Play klicken, wenn du CodePen öffnest (Browser erfordert User-Gesture zum Starten von Audio).</small>
+
+    <hr style="margin:12px 0 14px 0; border:0; height:1px; background:rgba(255,255,255,0.03)">
+
+    <pre id="log">Status: ready.</pre>
+  </div>
+
+  <script>
+  // ----- Tone.js arrangement for "Furba, Originale, Immortale" -----
+  (function(){
+    // Chord helper
+    const chordMap = {
+      'G': ['G3','B3','D4'],
+      'D': ['D3','F#3','A3'],
+      'Em': ['E3','G3','B3'],
+      'C': ['C3','E3','G3'],
+      'Am': ['A3','C4','E4']
+    };
+
+    // Song structure (sections with chord sequences)
+    const structure = [
+      { name:'intro', bars:4, chords:['G','D','Em','C'] },
+      { name:'verse', bars:8, chords:['G','D','Em','C','G','D','C','C'] },
+      { name:'pre', bars:4, chords:['Am','C','D','G'] },
+      { name:'chorus', bars:8, chords:['C','D','G','Em','C','D','G','G'] },
+      { name:'solo', bars:4, chords:['Em','C','G','D'] },
+      { name:'bridge', bars:4, chords:['Am','G','D','Em'] },
+      { name:'final', bars:8, chords:['C','D','G','Em','C','D','G','G'] }
+    ];
+
+    // Tone instruments
+    const master = new Tone.Gain().toDestination();
+    const reverb = new Tone.Reverb({decay:3.2, wet:0.18}).connect(master);
+    const plate = new Tone.Reverb({decay:1.8, wet:0.04}).connect(master);
+
+    const pad = new Tone.PolySynth(Tone.Synth, {
+      volume: -8,
+      maxPolyphony: 6,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.6, decay: 0.8, sustain: 0.6, release: 2.4 }
+    }).connect(reverb);
+
+    const electric = new Tone.PolySynth(Tone.Synth, {
+      volume: -6,
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.02, decay: 0.6, sustain: 0.4, release: 1.6 }
+    }).chain(new Tone.Distortion(0.2), plate);
+
+    const bass = new Tone.MonoSynth({
+      volume: -4,
+      oscillator: { type: 'square' },
+      filter: { Q: 2, type: 'lowpass' },
+      envelope: { attack: 0.02, decay: 0.4, sustain: 0.6, release: 0.8 }
+    }).connect(master);
+
+    const lead = new Tone.Synth({
+      oscillator: { type: 'sawtooth' },
+      envelope: { attack: 0.02, decay: 0.2, sustain: 0.3, release: 1.2 },
+      volume: -2
+    }).connect(reverb);
+
+    // Simple drum kit (kick + snare + hat)
+    const kick = new Tone.MembraneSynth({pitchDecay:0.02, volume:-6}).connect(master);
+    const snare = new Tone.NoiseSynth({volume:-10, envelope:{attack:0.001, decay:0.2}}).connect(master);
+    const hat = new Tone.MetalSynth({frequency:400, envelope:{attack:0.001, decay:0.1, release:0.1}, harmonicity:8, modulationIndex:32, resonance:300, octaves:1}).connect(master);
+
+    // Master volume control
+    const masterVol = new Tone.Volume(-6).connect(master);
+    master.connect(masterVol);
+    masterVol.toDestination();
+
+    // Helpers to play chords (root position) as whole-note pads & arpeggios
+    function playChordNow(chordName, dur='1m', time=Tone.now(), velocity=0.8){
+      const notes = chordMap[chordName] || chordMap['C'];
+      pad.triggerAttackRelease(notes, dur, time, velocity);
+      electric.triggerAttackRelease(notes.map(n=>Tone.Frequency(n).transpose(12).toNote()), dur, time, velocity*0.8);
+      // bass plays root
+      bass.triggerAttackRelease(notes[0], dur, time, velocity*0.9);
+    }
+
+    // Create a Tone.Part to schedule song sections
+    let timeline = new Tone.Part((time, event) => {
+      // event: {chord, section}
+      playChordNow(event.chord, '1m', time);
+    }, []).start(0);
+
+    // Build timeline from structure (each chord = 1 bar)
+    let curBar = 0;
+    structure.forEach(section=>{
+      section.chords.forEach(ch=>{
+        timeline.add(curBar + 'm', { chord: ch, section: section.name });
+        curBar += 1;
+      });
+      // small spacer between sections
+      curBar += 0; // keep continuous
+    });
+
+    // Add simple drum loop synced to bars (groove)
+    const drumLoop = new Tone.Loop((time) => {
+      // basic 4/4 groove: kick on 1, snare on 2 & 4, hat every 8th
+      const beat = Math.floor((Tone.Transport.seconds * (Tone.Transport.bpm.value/60)) % 4);
+      // use sequenced triggers:
+      // We'll simply schedule fixed pattern relative to measure
+      const measureTime = Tone.Time(Tone.Transport.position).toSeconds();
+      // schedule per measure
+      kick.triggerAttackRelease('C2', '8n', time);
+      Tone.Draw.schedule(()=>{}, time);
+      // snare after half note
+      snare.triggerAttackRelease('16n', time + Tone.Time('2n'));
+      // hats as subdivision
+      hat.triggerAttackRelease('16n', time + Tone.Time('4n'));
+      hat.triggerAttackRelease('16n', time + Tone.Time('2n') + Tone.Time('4n'));
+    }, '1m');
+
+    // Lead motif (a few notes) — play on chorus measures
+    const leadPart = new Tone.Part((time, note) => {
+      lead.triggerAttackRelease(note.pitch, note.dur, time, 0.9);
+    }, []).start(0);
+
+    // Add lead motif on chorus positions (we find chorus start index)
+    // Let's locate the chorus section in the structure
+    let measureIdx = 0;
+    structure.forEach(section=>{
+      if(section.name === 'chorus'){
+        // add a 2-bar motif looped across chorus chords
+        for(let i=0;i<8;i++){
+          // simple melodic choices over chord
+          const melody = ['G4','B4','D5','E5','D5','B4','G4','E5'];
+          leadPart.add((measureIdx + i) + 'm', { pitch: melody[i%melody.length], dur:'8n' });
+        }
+      }
+      measureIdx += section.chords.length;
+    });
+
+    // Transport & controls
+    Tone.Transport.bpm.value = 78;
+    Tone.Transport.timeSignature = 4;
+    Tone.Transport.loop = false;
+    Tone.Transport.loopStart = 0;
+    Tone.Transport.loopEnd = curBar + 'm';
+
+    // Start/Stop UI and event wiring
+    const playBtn = document.getElementById('play');
+    const stopBtn = document.getElementById('stop');
+    const bpm = document.getElementById('bpm');
+    const bpmLabel = document.getElementById('bpmLabel');
+    const vol = document.getElementById('vol');
+    const log = document.getElementById('log');
+
+    bpm.addEventListener('input', (e)=>{
+      const v = +e.target.value;
+      Tone.Transport.bpm.rampTo(v, 0.1);
+      bpmLabel.textContent = v;
+    });
+
+    vol.addEventListener('input',(e)=>{
+      const v = +e.target.value;
+      masterVol.volume.value = v;
+    });
+
+    // Ensure drumLoop is started when Transport starts
+    let started = false;
+    playBtn.addEventListener('click', async ()=>{
+      if(!started){
+        // required to enable audio in browser
+        await Tone.start();
+        // connect drum loop
+        drumLoop.start(0);
+        started = true;
+      }
+      if(Tone.Transport.state !== 'started'){
+        Tone.Transport.start('+0.1');
+        log.textContent = 'Status: playing…';
+        playBtn.textContent = '⏸ Pause';
+      } else {
+        Tone.Transport.pause();
+        log.textContent = 'Status: paused.';
+        playBtn.textContent = '► Play';
+      }
+    });
+
+    stopBtn.addEventListener('click', ()=>{
+      Tone.Transport.stop();
+      Tone.Transport.position = '0:0:0';
+      log.textContent = 'Status: stopped.';
+      playBtn.textContent = '► Play';
+    });
+
+    // nice little visual log of sections as they pass
+    timeline.callback = (time, event) => {
+      const sec = Tone.Time(time).toSeconds();
+      // write to log (throttled)
+      log.textContent = `Now: ${event.section} — chord ${event.chord} — time ${Tone.Time(time).toBarsBeatsSixteenths()}`;
+    };
+
+    // initial log
+    log.textContent = 'Status: ready — press Play to start (first Play unlocks audio).';
+  })();
+  </script>
+</body>
+</html>

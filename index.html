@@ -75,8 +75,8 @@ Tone.js wird per CDN geladen, dann Play drücken (erster Play ruft Tone.start())
 
     // Tone instruments
     const master = new Tone.Gain().toDestination();
-    const reverb = new Tone.Reverb({decay:3.2, wet:0.18}).connect(master);
-    const plate = new Tone.Reverb({decay:1.8, wet:0.04}).connect(master);
+    let reverb = new Tone.Reverb({decay:3.2, wet:0.18}).connect(master);
+    let plate = new Tone.Reverb({decay:1.8, wet:0.04}).connect(master);
 
     const pad = new Tone.PolySynth(Tone.Synth, {
       volume: -8,
@@ -110,9 +110,13 @@ Tone.js wird per CDN geladen, dann Play drücken (erster Play ruft Tone.start())
     const hat = new Tone.MetalSynth({frequency:400, envelope:{attack:0.001, decay:0.1, release:0.1}, harmonicity:8, modulationIndex:32, resonance:300, octaves:1}).connect(master);
 
     // Master volume control
-    const masterVol = new Tone.Volume(-6).connect(master);
+   /* const masterVol = new Tone.Volume(-6).connect(master);
     master.connect(masterVol);
-    masterVol.toDestination();
+    masterVol.toDestination();*/
+// Master volume control
+const masterVol = new Tone.Volume(-6).toDestination();
+reverb = new Tone.Reverb({decay:3.2, wet:0.18}).connect(masterVol);
+plate = new Tone.Reverb({decay:1.8, wet:0.04}).connect(masterVol);
 
     // Helpers to play chords (root position) as whole-note pads & arpeggios
     function playChordNow(chordName, dur='1m', time=Tone.now(), velocity=0.8){

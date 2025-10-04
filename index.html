@@ -79,15 +79,15 @@ Tone.js wird per CDN geladen, dann Play drücken (erster Play ruft Tone.start())
     let plate = new Tone.Reverb({decay:1.8, wet:0.04}).connect(master);
 
     const pad = new Tone.PolySynth(Tone.Synth, {
-      volume: -8,
+      volume: -2,
       maxPolyphony: 6,
       oscillator: { type: 'sine' },
       envelope: { attack: 0.6, decay: 0.8, sustain: 0.6, release: 2.4 }
     }).connect(reverb);
 
     const electric = new Tone.PolySynth(Tone.Synth, {
-      volume: -6,
-      oscillator: { type: 'triangle' },
+      volume: -3,
+      oscillator: { type: 'sawtooth' },
       envelope: { attack: 0.02, decay: 0.6, sustain: 0.4, release: 1.6 }
     }).chain(new Tone.Distortion(0.2), plate);
 
@@ -105,9 +105,9 @@ Tone.js wird per CDN geladen, dann Play drücken (erster Play ruft Tone.start())
     }).connect(reverb);
 
     // Simple drum kit (kick + snare + hat)
-    const kick = new Tone.MembraneSynth({pitchDecay:0.02, volume:-6}).connect(master);
-    const snare = new Tone.NoiseSynth({volume:-10, envelope:{attack:0.001, decay:0.2}}).connect(master);
-    const hat = new Tone.MetalSynth({frequency:400, envelope:{attack:0.001, decay:0.1, release:0.1}, harmonicity:8, modulationIndex:32, resonance:300, octaves:1}).connect(master);
+    const kick = new Tone.MembraneSynth({pitchDecay:0.02, volume:-10}).connect(master);
+    const snare = new Tone.NoiseSynth({volume:-14, envelope:{attack:0.001, decay:0.2}}).connect(master);
+    const hat = new Tone.MetalSynth({frequency:400, volume:-18,envelope:{attack:0.001, decay:0.1, release:0.1}, harmonicity:8, modulationIndex:32, resonance:300, octaves:1}).connect(master);
 
     // Master volume control
    /* const masterVol = new Tone.Volume(-6).connect(master);
